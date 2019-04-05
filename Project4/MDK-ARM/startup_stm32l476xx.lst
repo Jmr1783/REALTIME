@@ -720,7 +720,7 @@ ARM Macro Assembler    Page 12
 
 
 nclude --predefine="__EVAL SETA 1" --predefine="__MICROLIB SETA 1" --predefine=
-"__UVISION_VERSION SETA 525" --predefine="_RTE_ SETA 1" --predefine="STM32L476x
+"__UVISION_VERSION SETA 527" --predefine="_RTE_ SETA 1" --predefine="STM32L476x
 x SETA 1" --list=startup_stm32l476xx.lst startup_stm32l476xx.s
 
 
