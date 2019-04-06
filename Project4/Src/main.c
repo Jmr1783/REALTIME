@@ -78,8 +78,9 @@ uint32_t current_queue_length, max_queue_length = 0;
 uint32_t max_customer_wait_t=0, max_trans_time=0,max_time_customers_queue=0;
 uint32_t total_time_customer_waiting =0, total_teller_idle_time=0;
 uint32_t sim_sec = 0, sim_min = 0, sim_hr =  0, tick_cnt=0; //simulation global time
-uint32_t customer_wait_t=0;
+uint32_t customer_wait_t=0,customer_arrival_t =0;;
 uint32_t idle_timer = 0;
+uint32_t transaction_t=0;
 
 struct teller_data{ //* Teller(int teller_num){
    uint32_t customers_served;
@@ -126,7 +127,7 @@ void red_led_toggle()
 }
 
 void vBank( void *pvParameters ){
-    uint32_t transaction_t = 0;
+    //uint32_t transaction_t = 0;
     uint32_t arrival_t = 0;
     uint32_t Queue_size = 0;
 
@@ -159,9 +160,9 @@ void vBank( void *pvParameters ){
       // sim for 24hr time for simplicity
       if((sim_hr >= 9)&&(sim_hr <16)){// check if 9am, bank should open
         bank_is_open = 1; //open the bank
-        random(&arrival_t,100,400); //wait random 1 to 4 min  
-        random(&transaction_t,50,800); //wait random 30sec to 8mins
-        vTaskDelay(pdMS_TO_TICKS(arrival_t));
+        arrival_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 1 to 4 min, works
+        transaction_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 30sec to 8mins, works
+        vTaskDelay(arrival_t);
         xQueueSendToBack( Q, &transaction_t, 0);
         Queue_size = uxQueueMessagesWaiting(Q);
         if (Queue_size > max_queue_length)
@@ -185,7 +186,7 @@ void vBank( void *pvParameters ){
 													  +Teller[2].total_time_with_customers;
 				uint32_t avg_customer_transaction_t= total_customer_transaction_t/ total_customers_served;
 				uint32_t avg_time_waiting_customers = total_time_customer_waiting / total_customers_served;
-				uint32_t avg_time_teller_idle = (total_teller_idle_time) /3; // needs some sort of average **********
+				uint32_t avg_time_teller_idle = (total_teller_idle_time) /3; 
 				
 				//print metrics
 				static char aTxByte[500]; 
@@ -225,19 +226,15 @@ void vBank( void *pvParameters ){
 
 void vTeller( void *argument )
 {
-	 uint32_t transaction_t;
-    uint32_t arrival_t;
     struct teller_data* teller = (struct teller_data*)argument; //pointer to specific teller for each thread
     
     while(1){  
     if (xQueueReceive(Q, &transaction_t,0)== pdPASS){ // grab a customer and check if move was successful
             if( xSemaphoreTake(HAL_mutex, ( TickType_t ) 1000 ) == pdTRUE ){ // request access to data
-               arrival_t = sim_sec; // When the teller 
-               //update global or in struct: the customer wait time and busy time and other metrics
+               customer_arrival_t = tick_cnt; // When the teller meets customer
                teller->teller_status = 1; // update teller status
                
-               
-               customer_wait_t = (sim_sec - arrival_t);  // How long the customer is waiting to be seen
+               customer_wait_t = (tick_cnt - customer_arrival_t);  // How long the customer is waiting to be seen
                total_time_customer_waiting += customer_wait_t;  // Total over all customers
                
                if(customer_wait_t> max_customer_wait_t){// max customer wait time update
@@ -255,7 +252,7 @@ void vTeller( void *argument )
                
                xSemaphoreGive(HAL_mutex); // release access
             }
-            vTaskDelay(pdMS_TO_TICKS(transaction_t)); //wait 30s - 8min, state is busy until done
+            vTaskDelay(transaction_t); //wait 30s - 8min, state is busy until done
             teller->teller_status = 0; // the teller is now in idle
          }
    }
@@ -269,15 +266,6 @@ void thread_init (void) {
 	xTaskCreate (vTeller,"Teller2", NUM_STACK_DEPTH, &Teller[1], 1, NULL);
 	xTaskCreate (vTeller,"Teller3", NUM_STACK_DEPTH, &Teller[2], 1, NULL);
 } 
- 
-
-/* void random(uint32_t *pointer,uint32_t max, uint32_t min){
-   *pointer = ((RNG ->DR) % (max+1 - min) + min);
-} */
-
-uint32_t random(uint32_t*pointer,uint32_t max, uint32_t min){
-   return ((RNG ->DR) % (max+1 - min) + min);
-}
 
 void UART_Transmit(char* aTxByte){
     xSemaphoreTake (HAL_mutex, ( TickType_t ) 10);
