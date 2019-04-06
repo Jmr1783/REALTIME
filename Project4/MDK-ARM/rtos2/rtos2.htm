@@ -3,7 +3,7 @@
 <title>Static Call Graph - [rtos2\rtos2.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image rtos2\rtos2.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat Apr 06 00:14:12 2019
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat Apr 06 17:53:50 2019
 <BR><P>
 <H3>Maximum Stack Usage =        352 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -487,8 +487,8 @@ Global Symbols
 <P><STRONG><a name="[160]"></a>__aeabi_memcpy8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
 
 <P><STRONG><a name="[ee]"></a>strlen</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, strlen.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
-<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
+<BR><BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
+<LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
 </UL>
 
 <P><STRONG><a name="[71]"></a>__aeabi_ddiv</STRONG> (Thumb, 222 bytes, Stack size 32 bytes, ddiv.o(.text))
@@ -570,10 +570,10 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[10e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USBH_LL_DriverVBUS
 <LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USBH_Delay
+<LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USB_SetCurrentMode
 <LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USB_ResetPort
 <LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USB_HostInit
-<LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
 <P><STRONG><a name="[a5]"></a>HAL_GPIO_Init</STRONG> (Thumb, 414 bytes, Stack size 40 bytes, stm32l4xx_hal_gpio.o(i.HAL_GPIO_Init))
@@ -792,10 +792,10 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;NVIC_SetPriority
 </UL>
-<BR>[Called By]<UL><LI><a href="#[b3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
+<BR>[Called By]<UL><LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<LI><a href="#[b3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
 <LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_HCD_MspInit
 <LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_MspInit
-<LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
 
 <P><STRONG><a name="[b2]"></a>HAL_NVIC_SetPriorityGrouping</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, stm32l4xx_hal_cortex.o(i.HAL_NVIC_SetPriorityGrouping))
@@ -933,13 +933,13 @@ Global Symbols
 <P><STRONG><a name="[c6]"></a>HAL_TIM_IRQHandler</STRONG> (Thumb, 358 bytes, Stack size 16 bytes, stm32l4xx_hal_tim.o(i.HAL_TIM_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = HAL_TIM_IRQHandler
 </UL>
-<BR>[Calls]<UL><LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_TriggerCallback
+<BR>[Calls]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PeriodElapsedCallback
+<LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_TriggerCallback
 <LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PWM_PulseFinishedCallback
 <LI><a href="#[c8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_OC_DelayElapsedCallback
 <LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_IC_CaptureCallback
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIMEx_CommutationCallback
 <LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIMEx_BreakCallback
-<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PeriodElapsedCallback
 </UL>
 <BR>[Called By]<UL><LI><a href="#[3c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM5_IRQHandler
 </UL>
@@ -987,8 +987,8 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
 <LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
-<BR>[Called By]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
-<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
+<BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
+<LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
 </UL>
 
 <P><STRONG><a name="[d7]"></a>MX_DriverVbusFS</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, usbh_platform.o(i.MX_DriverVbusFS))
@@ -1649,8 +1649,8 @@ Global Symbols
 <P><STRONG><a name="[11d]"></a>__2sprintf</STRONG> (Thumb, 0 bytes, Stack size 24 bytes, printf3.o(i.__0sprintf$3))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = __2sprintf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
-<LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vBank
+<BR>[Called By]<UL><LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vBank
+<LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_Error_Handler
 </UL>
 
 <P><STRONG><a name="[167]"></a>__scatterload_copy</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_copy), UNUSED)
@@ -1670,13 +1670,13 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
-<LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
-<LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_FREERTOS_Init
-<LI><a href="#[122]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osKernelStart
 <LI><a href="#[de]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_USART2_UART_Init
 <LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_RNG_Init
 <LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;thread_init
 <LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
+<LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_FREERTOS_Init
+<LI><a href="#[122]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osKernelStart
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
@@ -1812,7 +1812,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;prvIdleTask
 </UL>
 
-<P><STRONG><a name="[61]"></a>vBank</STRONG> (Thumb, 350 bytes, Stack size 40 bytes, main.o(i.vBank))
+<P><STRONG><a name="[61]"></a>vBank</STRONG> (Thumb, 374 bytes, Stack size 40 bytes, main.o(i.vBank))
 <BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = vBank &rArr; UART_Transmit &rArr; xQueueGenericReceive &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xQueueGenericSend
@@ -1821,11 +1821,11 @@ Global Symbols
 <LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xTaskGetTickCount
 <LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTaskSuspendAll
 <LI><a href="#[123]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTaskDelay
+<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
 <LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2sprintf
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2d
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ddiv
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_d2uiz
-<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_Transmit
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.thread_init)
 </UL>
@@ -1912,9 +1912,9 @@ Global Symbols
 <LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTaskSuspendAll
 <LI><a href="#[12d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;prvAddCurrentTaskToDelayedList
 </UL>
-<BR>[Called By]<UL><LI><a href="#[e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
-<LI><a href="#[62]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTeller
+<BR>[Called By]<UL><LI><a href="#[62]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTeller
 <LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vBank
+<LI><a href="#[e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
 </UL>
 
 <P><STRONG><a name="[145]"></a>vTaskMissedYield</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, tasks.o(i.vTaskMissedYield))
@@ -1969,7 +1969,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PendSV_Handler
 </UL>
 
-<P><STRONG><a name="[62]"></a>vTeller</STRONG> (Thumb, 96 bytes, Stack size 0 bytes, main.o(i.vTeller))
+<P><STRONG><a name="[62]"></a>vTeller</STRONG> (Thumb, 146 bytes, Stack size 0 bytes, main.o(i.vTeller))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = vTeller &rArr; xQueueGenericReceive &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xQueueGenericSend

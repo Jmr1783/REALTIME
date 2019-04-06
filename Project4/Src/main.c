@@ -75,17 +75,26 @@ RNG_HandleTypeDef RNGen;
 
 uint8_t bank_is_open = 0;
 uint32_t current_queue_length, max_queue_length = 0;
-uint32_t max_customer_wait_t=0, max_trans_time=0,max_time_customers_queue=0;
+uint32_t max_teller_idle_t=0, max_trans_time=0,max_customer_queue_t=0;
 uint32_t total_time_customer_waiting =0, total_teller_idle_time=0;
 uint32_t sim_sec = 0, sim_min = 0, sim_hr =  0, tick_cnt=0; //simulation global time
-uint32_t customer_wait_t=0,customer_arrival_t =0;;
+uint32_t customer_wait_t=0,customer_generated_t =0;
 uint32_t idle_timer = 0;
 uint32_t transaction_t=0;
+
+
+uint32_t total_customers_served = 0;
+uint32_t total_customer_transaction_t = 0;  
+uint32_t avg_customer_transaction_t = 0;
+uint32_t avg_time_waiting_customers = 0;
+uint32_t avg_time_teller_idle = 0; 
 
 struct teller_data{ //* Teller(int teller_num){
    uint32_t customers_served;
    uint8_t  teller_status; //0 = idle and 1 = busy
    uint32_t teller_ID;
+   uint32_t customer_arrival_t;
+   uint32_t teller_finished_t;
    uint32_t total_time_with_customers;
    uint32_t avg_time_with_customers;
    uint32_t idle_time;
@@ -114,79 +123,51 @@ void vApplicationIdleHook( void ) {
     idle_timer++;
 }
 
-void green_led_toggle()
-{
-	GPIOE->ODR ^= GPIO_ODR_ODR_8;
-	for(int i = 0; i < 1000; i++){}
-}
-
-void red_led_toggle()
-{
-	GPIOB->ODR ^= GPIO_ODR_ODR_2;
-	for(int i = 0; i < 1000; i++){}
-}
-
 void vBank( void *pvParameters ){
     //uint32_t transaction_t = 0;
     uint32_t arrival_t = 0;
-    uint32_t Queue_size = 0;
-
-    
+    uint32_t Queue_size = 0;   
    while(1){
      Queue_size = uxQueueMessagesWaiting(Q);
-     if( xSemaphoreTake (HAL_mutex, ( TickType_t ) 1000) == pdTRUE ){ // request access to data
-     
-     tick_cnt = xTaskGetTickCount(); // 1ms = 1 tick
-     sim_sec = (uint32_t)(tick_cnt/1.666666)%60;    // 1.666 ticks = 1 sec sim
-     sim_min = (tick_cnt/100)%60;  // 100 ticks = 1 min sim
-     sim_hr =  (tick_cnt/6000)+8;  // 6000 ticks = 1 hr sim
-      
-      
-      static char aTxByte[300];
-      sprintf(aTxByte,
-         "\fSystem Time: %d : %d : %d \n\r" 
-         "Customers in line: %d customers\n\r" 
-         "Teller 1 status: %d \n\r" 
-         "Teller 2 status: %d \n\r" 
-         "Teller 3 status: %d \n\r"
-         "Bank Open: %d \n\r\n\r"
-           ,
-         sim_hr,sim_min,sim_sec,Queue_size,
-         Teller[0].teller_status,Teller[1].teller_status,Teller[2].teller_status, bank_is_open
-      ); 
-      UART_Transmit(aTxByte);
-      
+     if( xSemaphoreTake (HAL_mutex, ( TickType_t ) 10000) == pdTRUE ){ // request access to data
+        tick_cnt = xTaskGetTickCount(); // 1ms = 1 tick
+        sim_sec = (uint32_t)(tick_cnt/1.666666)%60;    // 1.666 ticks = 1 sec sim
+        sim_min = (tick_cnt/100)%60;  // 100 ticks = 1 min sim
+        sim_hr =  (tick_cnt/6000)+8;  // 6000 ticks = 1 hr sim
+        static char aTxByte[300];
+        sprintf(aTxByte,"\fSystem Time: %d : %d : %d \n\r""Customers in line: %d customers\n\r" 
+        "Teller 1 status: %d \n\r""Teller 2 status: %d \n\r""Teller 3 status: %d \n\r",
+        sim_hr,sim_min,sim_sec,Queue_size,Teller[0].teller_status,Teller[1].teller_status,Teller[2].teller_status); 
+        UART_Transmit(aTxByte);
       
       // sim for 24hr time for simplicity
       if((sim_hr >= 9)&&(sim_hr <16)){// check if 9am, bank should open
-        bank_is_open = 1; //open the bank
         arrival_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 1 to 4 min, works
         transaction_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 30sec to 8mins, works
         vTaskDelay(arrival_t);
         xQueueSendToBack( Q, &transaction_t, 0);
-        Queue_size = uxQueueMessagesWaiting(Q);
+        customer_generated_t = tick_cnt;
         if (Queue_size > max_queue_length)
             max_queue_length = Queue_size;
 		}
       
       if(sim_hr >= 16){ // check if 4pm, bank should close
-			bank_is_open = 0; // close bank
-			if(Queue_size == 0){
+         if(Queue_size == 0){
 				static char msg[20];
 				sprintf(msg,"Bank is closed...\n\r"); 
 				UART_Transmit(msg);
-				
-				
 				// get totals and avgs
-				uint32_t  total_customers_served = Teller[0].customers_served
+            // Note: raw ticks were converted to sim time to display in minutes
+				total_customers_served = (Teller[0].customers_served
 												 +Teller[1].customers_served
-												 +Teller[2].customers_served;
-				uint32_t total_customer_transaction_t = Teller[0].total_time_with_customers
+												 +Teller[2].customers_served);
+				total_customer_transaction_t = (Teller[0].total_time_with_customers
 													  +Teller[1].total_time_with_customers
-													  +Teller[2].total_time_with_customers;
-				uint32_t avg_customer_transaction_t= total_customer_transaction_t/ total_customers_served;
-				uint32_t avg_time_waiting_customers = total_time_customer_waiting / total_customers_served;
-				uint32_t avg_time_teller_idle = (total_teller_idle_time) /3; 
+													  +Teller[2].total_time_with_customers)/100;  
+				avg_customer_transaction_t = total_customer_transaction_t/ total_customers_served;
+				avg_time_waiting_customers = (total_time_customer_waiting / total_customers_served)/100;
+            total_teller_idle_time = (Teller[0].idle_time + Teller[1].idle_time + Teller[2].idle_time)/100;
+				avg_time_teller_idle = (total_teller_idle_time) /3; 
 				
 				//print metrics
 				static char aTxByte[500]; 
@@ -201,16 +182,16 @@ void vBank( void *pvParameters ){
 				   "Max time Customer spent in queue: %d mins\n\r" 
 				   "Max time teller waited for customer: %d mins\n\r"
 				   "Max time spent on a transaction: %d mins\n\r"
-				   "Max recorded customer line size: %d mins\n\r",
+				   "Max recorded customer line size: %d customers\n\r",
 				   total_customers_served, 
 				   Teller[0].customers_served, 
 				   Teller[1].customers_served, 
 				   Teller[2].customers_served,
 				   avg_time_waiting_customers,  
 				   avg_customer_transaction_t,
-				   avg_time_teller_idle,
-				   max_time_customers_queue,
-				   max_customer_wait_t, 
+				   avg_time_teller_idle, //large
+				   max_customer_queue_t,
+				   max_teller_idle_t, //large
 				   max_trans_time,
 				   max_queue_length     
 				); 
@@ -230,20 +211,27 @@ void vTeller( void *argument )
     
     while(1){  
     if (xQueueReceive(Q, &transaction_t,0)== pdPASS){ // grab a customer and check if move was successful
-            if( xSemaphoreTake(HAL_mutex, ( TickType_t ) 1000 ) == pdTRUE ){ // request access to data
-               customer_arrival_t = tick_cnt; // When the teller meets customer
+            if( xSemaphoreTake(HAL_mutex, ( TickType_t ) 10000 ) == pdTRUE ){ // request access to data
+               
+               teller->customer_arrival_t = tick_cnt; // When the teller meets customer
+               
                teller->teller_status = 1; // update teller status
                
-               customer_wait_t = (tick_cnt - customer_arrival_t);  // How long the customer is waiting to be seen
-               total_time_customer_waiting += customer_wait_t;  // Total over all customers
+               teller->idle_time = (teller->customer_arrival_t - teller->teller_finished_t); //How long the teller was idle
                
-               if(customer_wait_t> max_customer_wait_t){// max customer wait time update
-                  max_customer_wait_t = customer_wait_t;
+               customer_wait_t = (tick_cnt - customer_generated_t);  // How long the customer is waiting to be seen
+               total_time_customer_waiting += (customer_wait_t);  // Total over all customers
+               
+               if(teller->idle_time> max_teller_idle_t){// max customer wait time update
+                  max_teller_idle_t = (teller->idle_time)/100;
                }
+               
+               if(customer_wait_t>max_customer_queue_t)
+                  max_customer_queue_t = customer_wait_t/100;
                
                
                if(transaction_t > max_trans_time){// max trans time update
-                  max_trans_time = transaction_t;
+                  max_trans_time = (transaction_t)/100;
                }
                      
                teller->total_time_with_customers += transaction_t; // total serve time update
@@ -253,7 +241,9 @@ void vTeller( void *argument )
                xSemaphoreGive(HAL_mutex); // release access
             }
             vTaskDelay(transaction_t); //wait 30s - 8min, state is busy until done
+            teller->teller_finished_t = tick_cnt; // when the teller goes idle
             teller->teller_status = 0; // the teller is now in idle
+            
          }
    }
 }
@@ -272,19 +262,6 @@ void UART_Transmit(char* aTxByte){
     HAL_UART_Transmit(&huart2,(uint8_t*) aTxByte, strlen(aTxByte), 1000000);
     xSemaphoreGive (HAL_mutex);
 }
-
-void resource_display(){
-    char aTxByte[100];
-   int x = uxTaskGetNumberOfTasks();
-   int y = xPortGetFreeHeapSize();
-   int z = xPortGetMinimumEverFreeHeapSize();
-    sprintf(aTxByte,
-   "%d Running\n\r"
-   "%d Bytes Free\n\r"
-   "%d Min Bytes Free\n\r", x,y,z); 
-   UART_Transmit(aTxByte);
-}
-
 
 /* USER CODE END 0 */
 
@@ -331,7 +308,6 @@ int main(void)
   /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   HAL_Delay(100);
-  //resource_display();
   /* Start scheduler */
   osKernelStart();
   
