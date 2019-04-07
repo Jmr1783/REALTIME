@@ -63,200 +63,266 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
+//****************************************************************************************************
+//# Definitions section
 #define NUM_THREADS (3)
 #define MAX_QUEUE_LENGTH (100)
 #define NUM_STACK_DEPTH (256)
+//****************************************************************************************************
+//Type Definitions section
 TaskHandle_t thread_handles [NUM_THREADS];
 SemaphoreHandle_t HAL_mutex;
-QueueHandle_t Q;
-
+QueueHandle_t queue;
 RNG_HandleTypeDef RNGen;
+//****************************************************************************************************
+//Global variables section
+uint32_t current_queue_length=0,max_queue_length=0;
+uint32_t max_teller_idle_t=0,max_trans_time=0,max_customer_queue_t=0;
+uint32_t total_customer_wait_t=0,total_teller_idle_t=0,total_customers_served=0,total_customer_transaction_t=0;  
+uint32_t sim_sec=0,sim_min=0,sim_hr=0,tick_cnt=0;
+uint32_t customer_wait_t=0,customer_generated_t=0,transaction_t=0;
+uint32_t avg_customer_transaction_t=0,avg_customer_wait_t=0,avg_teller_idle_t=0; 
+uint32_t program_idle_timer=0;
 
-uint8_t bank_is_open = 0;
-uint32_t current_queue_length, max_queue_length = 0;
-uint32_t max_teller_idle_t=0, max_trans_time=0,max_customer_queue_t=0;
-uint32_t total_time_customer_waiting =0, total_teller_idle_time=0;
-uint32_t sim_sec = 0, sim_min = 0, sim_hr =  0, tick_cnt=0; //simulation global time
-uint32_t customer_wait_t=0,customer_generated_t =0;
-uint32_t idle_timer = 0;
-uint32_t transaction_t=0;
-
-
-uint32_t total_customers_served = 0;
-uint32_t total_customer_transaction_t = 0;  
-uint32_t avg_customer_transaction_t = 0;
-uint32_t avg_time_waiting_customers = 0;
-uint32_t avg_time_teller_idle = 0; 
-
-struct teller_data{ //* Teller(int teller_num){
+//****************************************************************************************************
+/*
+   Global struct: teller_data
+   This will store data each teller uses throughout the program
+*/
+struct teller_data{
    uint32_t customers_served;
-   uint8_t  teller_status; //0 = idle and 1 = busy
-   uint32_t teller_ID;
-   uint32_t customer_arrival_t;
+   uint8_t  teller_status; //status is represented as 0 = idle and 1 = busy
+   uint32_t customer_customer_showup_t;
    uint32_t teller_finished_t;
    uint32_t total_time_with_customers;
-   uint32_t avg_time_with_customers;
    uint32_t idle_time;
-   uint32_t busy_time;
 }Teller[3];
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
+//****************************************************************************************************
+//Function prototype section
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
 void UART2_Init(void);
 void UART2_GPIO_Init(void);
 uint32_t random(uint32_t*,uint32_t, uint32_t);
 void UART_Transmit(char*);
 void debug(void);
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-
+//****************************************************************************************************
 void vApplicationIdleHook( void ) {
-    idle_timer++;
+    program_idle_timer++;
 }
-
+//****************************************************************************************************
+/*
+	FUNCTION THAT IS A THREAD THAT ACTS AS THE MANAGER OF THE BANK
+	INPUT PARAMETERS: pvParameters THAT IS SENT BY THE RTOS PROGRAM
+	FUNCTION OUTPUT: void OUTPUT TYPE, this function updates simulation time, 
+					generates customers and puts them in the queue,
+					manages when the bank is open and when it is closed,
+					prints the system metrics 
+*/
 void vBank( void *pvParameters ){
-    //uint32_t transaction_t = 0;
-    uint32_t arrival_t = 0;
-    uint32_t Queue_size = 0;   
+   uint32_t customer_showup_t = 0;
+   uint32_t queue_size = 0;   
+   static char msg1[300], msg2[30],msg3[500];
+ 
    while(1){
-     Queue_size = uxQueueMessagesWaiting(Q);
-     if( xSemaphoreTake (HAL_mutex, ( TickType_t ) 10000) == pdTRUE ){ // request access to data
-        tick_cnt = xTaskGetTickCount(); // 1ms = 1 tick
-        sim_sec = (uint32_t)(tick_cnt/1.666666)%60;    // 1.666 ticks = 1 sec sim
-        sim_min = (tick_cnt/100)%60;  // 100 ticks = 1 min sim
-        sim_hr =  (tick_cnt/6000)+8;  // 6000 ticks = 1 hr sim
-        static char aTxByte[300];
-        sprintf(aTxByte,"\fSystem Time: %d : %d : %d \n\r""Customers in line: %d customers\n\r" 
-        "Teller 1 status: %d \n\r""Teller 2 status: %d \n\r""Teller 3 status: %d \n\r",
-        sim_hr,sim_min,sim_sec,Queue_size,Teller[0].teller_status,Teller[1].teller_status,Teller[2].teller_status); 
-        UART_Transmit(aTxByte);
+      // update the current size of the queue
+	  queue_size = uxQueueMessagesWaiting(queue);
       
-      // sim for 24hr time for simplicity
-      if((sim_hr >= 9)&&(sim_hr <16)){// check if 9am, bank should open
-        arrival_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 1 to 4 min, works
-        transaction_t=((RNG ->DR) % (400+1 - 100) + 100);//wait random 30sec to 8mins, works
-        vTaskDelay(arrival_t);
-        xQueueSendToBack( Q, &transaction_t, 0);
-        customer_generated_t = tick_cnt;
-        if (Queue_size > max_queue_length)
-            max_queue_length = Queue_size;
-		}
+	  // request token to access data by system created mutex
+	  if( xSemaphoreTake (HAL_mutex, ( TickType_t ) 1000) == pdTRUE ){ 
+         //get current system tick count 1ms = 1 tick
+		 tick_cnt = xTaskGetTickCount(); 
+		 
+		 // convert system tick to sim secs, 1.666 ticks = 1 sec sim
+         sim_sec = (uint32_t)(tick_cnt/1.666666)%60; 
+		 
+		 // convert system tick to sim minutes, 100 ticks = 1 min sim
+         sim_min = (tick_cnt/100)%60; 
+         
+		 // convert system tick to sim hours, 6000 ticks = 1 hr sim
+		 sim_hr =  (tick_cnt/6000)+8; 
+         
+		 //Write formatted data to string
+		 sprintf(msg1,"\fSystem Time: %d : %d : %d \n\r""Customers in line: %d customers\n\r" 
+         "Teller 1 status: %d \n\r""Teller 2 status: %d \n\r""Teller 3 status: %d \n\r",
+         sim_hr,sim_min,sim_sec,queue_size,Teller[0].teller_status,Teller[1].teller_status,Teller[2].teller_status); 
+         
+		 //Send Char string through uart2 line
+		 UART_Transmit(msg1); 
+      
+         // check if 9am, bank should open
+		 if((sim_hr >= 9)&&(sim_hr <16)){
+			//wait random amount of time 1 min to 4 mins
+            customer_showup_t=((RNG->DR) % (400+1 - 100) + 100);
+			//wait random amount of time 30sec to 8mins
+            transaction_t=((RNG->DR) % (800+1 - 50) + 50);
+			//delay task by customer_showup_t
+            vTaskDelay(customer_showup_t);
+			//Insert new customer to back of queue
+            xQueueSendToBack(queue, &transaction_t, 0);
+			//Timestamp when a customer was thrown into queue
+            customer_generated_t = tick_cnt;
+			//Update recorded max queue size 
+            if (queue_size > max_queue_length)
+               max_queue_length = queue_size;
+         }
       
       if(sim_hr >= 16){ // check if 4pm, bank should close
-         if(Queue_size == 0){
-				static char msg[20];
-				sprintf(msg,"Bank is closed...\n\r"); 
-				UART_Transmit(msg);
-				// get totals and avgs
-            // Note: raw ticks were converted to sim time to display in minutes
+         if(queue_size == 0){
+				
+            //Write formatted data to string
+            sprintf(msg2,"Bank is closed...\n\r"); 
+				
+            //Print to console
+            UART_Transmit(msg2);
+				
+            //Compute total customer served by sum of all tellers
 				total_customers_served = (Teller[0].customers_served
 												 +Teller[1].customers_served
 												 +Teller[2].customers_served);
-				total_customer_transaction_t = (Teller[0].total_time_with_customers
+				
+            //Compute total tramsaction time by sum of all tellers
+            total_customer_transaction_t = (Teller[0].total_time_with_customers
 													  +Teller[1].total_time_with_customers
 													  +Teller[2].total_time_with_customers)/100;  
-				avg_customer_transaction_t = total_customer_transaction_t/ total_customers_served;
-				avg_time_waiting_customers = (total_time_customer_waiting / total_customers_served)/100;
-            total_teller_idle_time = (Teller[0].idle_time + Teller[1].idle_time + Teller[2].idle_time)/100;
-				avg_time_teller_idle = (total_teller_idle_time) /3; 
 				
-				//print metrics
-				static char aTxByte[500]; 
-				sprintf(aTxByte,
+            //Compute the avg transaction time
+            avg_customer_transaction_t = total_customer_transaction_t/ total_customers_served;
+				
+            //Compute the avg customer wait time
+            avg_customer_wait_t = (total_customer_wait_t / total_customers_served)/100;
+            
+            //Compute the total teller idle time
+            total_teller_idle_t = (Teller[0].idle_time + Teller[1].idle_time + Teller[2].idle_time)/100;
+				
+            //Compute the avg teller idle time
+            avg_teller_idle_t = (total_teller_idle_t) /3; 
+				
+				//print simulation metrics
+				sprintf(msg3,
 				   "Total customers served: %d customers\n\r" 
 				   "Teller 1 served: %d customers\n\r" 
 				   "Teller 2 served: %d customers\n\r" 
 				   "Teller 3 served: %d customers\n\r" 
-				   "Customer spends on avg in queue: %d mins\n\r" 
-				   "Customer spends on avg with teller: %d mins\n\r"
-				   "Teller spends on avg with customer: %d mins\n\r"    
-				   "Max time Customer spent in queue: %d mins\n\r" 
-				   "Max time teller waited for customer: %d mins\n\r"
-				   "Max time spent on a transaction: %d mins\n\r"
+				   "Customer spends on avg in queue: %d mins %d secs\n\r" 
+				   "Customer spends on avg with teller: %d mins %d secs\n\r"
+				   "Teller spends on avg with customer: %d mins %d secs\n\r"    
+				   "Max time Customer spent in queue: %d mins %d secs\n\r" 
+				   "Max time teller waited for customer: %d mins %d secs\n\r"
+				   "Max time spent on a transaction: %d mins %d secs\n\r"
 				   "Max recorded customer line size: %d customers\n\r",
 				   total_customers_served, 
 				   Teller[0].customers_served, 
 				   Teller[1].customers_served, 
 				   Teller[2].customers_served,
-				   avg_time_waiting_customers,  
+				   avg_customer_wait_t,
+				   (uint32_t)(avg_customer_wait_t/1.666666)%60,
 				   avg_customer_transaction_t,
-				   avg_time_teller_idle, //large
+				   (uint32_t)(avg_customer_transaction_t/1.666666)%60,
+				   avg_teller_idle_t,
+				   (uint32_t)(avg_teller_idle_t/1.666666)%60,
 				   max_customer_queue_t,
-				   max_teller_idle_t, //large
+				   (uint32_t)(max_customer_queue_t/1.666666)%60,
+				   max_teller_idle_t,
+				   (uint32_t)(max_teller_idle_t/1.666666)%60,
 				   max_trans_time,
+				   (uint32_t)(max_trans_time/1.666666)%60,
 				   max_queue_length     
 				); 
-				UART_Transmit(aTxByte);  //send to console
-				vTaskSuspendAll();// suspend all tasks currently running
+            
+            //send char array to console
+				UART_Transmit(msg3);  
+            
+            // suspend all tasks currently running
+				vTaskSuspendAll();
 			}
 		}
-		xSemaphoreGive(HAL_mutex); // release access
+		xSemaphoreGive(HAL_mutex); // release access of mutex
 		}
 	}
 }
-
-
-void vTeller( void *argument )
+//****************************************************************************************************
+/*
+	FUNCTION THAT IS A THREAD THAT ACTS AS A TELLER OF THE BANK
+			UPDATES ALL METRICS RELATING TO PROGRAM
+			PULLS ITEMS OUT OF THE QUEUE
+	INPUT PARAMETERS: pvParameters THAT IS SENT BY THE RTOS PROGRAM
+	FUNCTION OUTPUT: void OUTPUT TYPE
+*/
+void vTeller( void *pvParameters )
 {
-    struct teller_data* teller = (struct teller_data*)argument; //pointer to specific teller for each thread
-    
+    struct teller_data* teller = (struct teller_data*)pvParameters; //pointer to specific teller for each thread
     while(1){  
-    if (xQueueReceive(Q, &transaction_t,0)== pdPASS){ // grab a customer and check if move was successful
-            if( xSemaphoreTake(HAL_mutex, ( TickType_t ) 10000 ) == pdTRUE ){ // request access to data
+		if (xQueueReceive(queue, &transaction_t,0)== pdPASS){ // grab a customer and check if move was successful
+            
+			// request token to access data by system created mutex
+			if( xSemaphoreTake(HAL_mutex, ( TickType_t ) 1000 ) == pdTRUE ){ 
                
-               teller->customer_arrival_t = tick_cnt; // When the teller meets customer
+			   // Record timestamp when the teller meets customer
+			   teller->customer_customer_showup_t = tick_cnt; 
                
-               teller->teller_status = 1; // update teller status
+			   // Update teller status
+			   teller->teller_status = 1; 
                
-               teller->idle_time = (teller->customer_arrival_t - teller->teller_finished_t); //How long the teller was idle
+			   //Record how long the teller was idle 
+			   teller->idle_time = (teller->customer_customer_showup_t - teller->teller_finished_t); 
                
-               customer_wait_t = (tick_cnt - customer_generated_t);  // How long the customer is waiting to be seen
-               total_time_customer_waiting += (customer_wait_t);  // Total over all customers
+			   // Record how long the customer is waiting to be seen
+			   customer_wait_t = (tick_cnt - customer_generated_t);  
                
-               if(teller->idle_time> max_teller_idle_t){// max customer wait time update
+			   // Record the total customer wait time
+			   total_customer_wait_t += (customer_wait_t);     
+               
+			   // Update the max teller idle time
+			   if(teller->idle_time> max_teller_idle_t)
                   max_teller_idle_t = (teller->idle_time)/100;
-               }
                
-               if(customer_wait_t>max_customer_queue_t)
+			   // Update the max customer wait time
+			   if(customer_wait_t>max_customer_queue_t)
                   max_customer_queue_t = customer_wait_t/100;
                
+			   // Update the max transaction time
+			   if(transaction_t > max_trans_time)
+                  max_trans_time = (transaction_t)/100;     
                
-               if(transaction_t > max_trans_time){// max trans time update
-                  max_trans_time = (transaction_t)/100;
-               }
-                     
-               teller->total_time_with_customers += transaction_t; // total serve time update
+			   // Update the total time with customers 
+			   teller->total_time_with_customers += transaction_t;  
                
-               teller->customers_served++; // total # of customers served
+			   // Update the total # of customers served
+			   teller->customers_served++; 
                
-               xSemaphoreGive(HAL_mutex); // release access
+			   // release token/access to mutex
+			   xSemaphoreGive(HAL_mutex); 
             }
-            vTaskDelay(transaction_t); //wait 30s - 8min, state is busy until done
-            teller->teller_finished_t = tick_cnt; // when the teller goes idle
-            teller->teller_status = 0; // the teller is now in idle
-            
-         }
-   }
+        vTaskDelay(transaction_t); //wait 30s - 8min, state is busy until done
+        teller->teller_finished_t = tick_cnt; // when the teller goes idle
+        teller->teller_status = 0; // the teller is now in idle 
+        }
+	}
 }
-
+//****************************************************************************************************
+/*
+	FUNCTION THAT INITIALIZES EVERY NEEDED BY THE FREERTOS SYSTEM
+	INPUT PARAMETERS: void input
+	FUNCTION OUTPUT: void OUTPUT TYPE, this function creates a global mutex
+					creates a queue of size MAX_QUEUE_LENGTH,
+					creates 1 vBank task and 3 vTeller tasks 
+*/
 void thread_init (void) {
-   HAL_mutex = xSemaphoreCreateMutex ();
-   Q = xQueueCreate(MAX_QUEUE_LENGTH, sizeof(uint32_t));
+    HAL_mutex = xSemaphoreCreateMutex ();
+    queue = xQueueCreate(MAX_QUEUE_LENGTH, sizeof(uint32_t));
 	xTaskCreate (vBank,"Bank", NUM_STACK_DEPTH, NULL, 1, NULL);
 	xTaskCreate (vTeller,"Teller1", NUM_STACK_DEPTH, &Teller[0], 1, NULL);
 	xTaskCreate (vTeller,"Teller2", NUM_STACK_DEPTH, &Teller[1], 1, NULL);
 	xTaskCreate (vTeller,"Teller3", NUM_STACK_DEPTH, &Teller[2], 1, NULL);
 } 
-
+//****************************************************************************************************
+/*
+	FUNCTION THAT SENDS A CHAR ARRAY BY UART2 
+	INPUT PARAMETERS: *aTxByte 
+	FUNCTION OUTPUT: void OUTPUT TYPE
+*/
 void UART_Transmit(char* aTxByte){
     xSemaphoreTake (HAL_mutex, ( TickType_t ) 10);
     HAL_UART_Transmit(&huart2,(uint8_t*) aTxByte, strlen(aTxByte), 1000000);
@@ -270,6 +336,8 @@ void UART_Transmit(char* aTxByte){
   *
   * @retval None
   */
+//****************************************************************************************************
+//main
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -299,8 +367,7 @@ int main(void)
   
   /* USER CODE BEGIN 2 */
     
-    // TODO: Your code here
-
+  /* Initialize all tasks*/
   thread_init();
   
   /* USER CODE END 2 */
