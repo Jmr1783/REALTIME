@@ -77,7 +77,7 @@ RNG_HandleTypeDef RNGen;
 //****************************************************************************************************
 //Global variables section
 uint32_t current_queue_length=0,max_queue_length=0;
-uint32_t max_teller_idle_t=0,max_trans_time=0,max_customer_queue_t=0;
+uint32_t max_teller_idle_t=0,max_teller_idle_t_sec=0,max_trans_time=0,max_customer_queue_t=0;
 uint32_t total_customer_wait_t=0,total_teller_idle_t=0,total_customers_served=0,total_customer_transaction_t=0;  
 uint32_t sim_sec=0,sim_min=0,sim_hr=0,tick_cnt=0;
 uint32_t customer_wait_t=0,customer_generated_t=0,transaction_t=0;
@@ -185,16 +185,16 @@ void vBank( void *pvParameters ){
             //Compute total tramsaction time by sum of all tellers
             total_customer_transaction_t = (Teller[0].total_time_with_customers
 													  +Teller[1].total_time_with_customers
-													  +Teller[2].total_time_with_customers)/100;  
+													  +Teller[2].total_time_with_customers);  
 				
             //Compute the avg transaction time
             avg_customer_transaction_t = total_customer_transaction_t/ total_customers_served;
 				
             //Compute the avg customer wait time
-            avg_customer_wait_t = (total_customer_wait_t / total_customers_served)/100;
+            avg_customer_wait_t = (total_customer_wait_t / total_customers_served);
             
             //Compute the total teller idle time
-            total_teller_idle_t = (Teller[0].idle_time + Teller[1].idle_time + Teller[2].idle_time)/100;
+            total_teller_idle_t = (Teller[0].idle_time + Teller[1].idle_time + Teller[2].idle_time);
 				
             //Compute the avg teller idle time
             avg_teller_idle_t = (total_teller_idle_t) /3; 
@@ -216,17 +216,17 @@ void vBank( void *pvParameters ){
 				   Teller[0].customers_served, 
 				   Teller[1].customers_served, 
 				   Teller[2].customers_served,
-				   avg_customer_wait_t,
+				   avg_customer_wait_t/100,
 				   (uint32_t)(avg_customer_wait_t/1.666666)%60,
-				   avg_customer_transaction_t,
+				   avg_customer_transaction_t/100,
 				   (uint32_t)(avg_customer_transaction_t/1.666666)%60,
-				   avg_teller_idle_t,
+				   avg_teller_idle_t/100,
 				   (uint32_t)(avg_teller_idle_t/1.666666)%60,
-				   max_customer_queue_t,
+				   max_customer_queue_t/100,
 				   (uint32_t)(max_customer_queue_t/1.666666)%60,
 				   max_teller_idle_t,
-				   (uint32_t)(max_teller_idle_t/1.666666)%60,
-				   max_trans_time,
+				   max_teller_idle_t_sec,
+				   max_trans_time/100,
 				   (uint32_t)(max_trans_time/1.666666)%60,
 				   max_queue_length     
 				); 
@@ -275,16 +275,18 @@ void vTeller( void *pvParameters )
 			   total_customer_wait_t += (customer_wait_t);     
                
 			   // Update the max teller idle time
-			   if(teller->idle_time> max_teller_idle_t)
+			   if(teller->idle_time> max_teller_idle_t){
                   max_teller_idle_t = (teller->idle_time)/100;
+                  max_teller_idle_t_sec= (uint32_t)(teller->idle_time/1.666666)%60;
+               }
                
 			   // Update the max customer wait time
 			   if(customer_wait_t>max_customer_queue_t)
-                  max_customer_queue_t = customer_wait_t/100;
+                  max_customer_queue_t = customer_wait_t;
                
 			   // Update the max transaction time
 			   if(transaction_t > max_trans_time)
-                  max_trans_time = (transaction_t)/100;     
+                  max_trans_time = (transaction_t);     
                
 			   // Update the total time with customers 
 			   teller->total_time_with_customers += transaction_t;  
